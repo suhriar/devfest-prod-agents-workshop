@@ -1,10 +1,10 @@
 # Prompt 1 — Deploy otomatis ke Cloud Run
 
-> Skill yang dipakai: `cloud-run-basics`, `gcloud`
-> Salin prompt di bawah, lalu tempel di **Gemini CLI** (dibuka dari folder `~/devfest-prod-agents-workshop`).
+> Skill yang dipakai: `cloud-run-basics`
+> Salin prompt di bawah, lalu tempel di **Antigravity CLI** (dibuka dari folder `~/devfest-prod-agents-workshop`).
 
 ```
-Gunakan skill cloud-run-basics dan gcloud.
+Gunakan skill cloud-run-basics.
 
 Deploy project Python ADK di folder ini ke Cloud Run. Ketentuan:
 - Baca konfigurasi dari file .env (GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_LOCATION, REGION, SERVICE_NAME, MODEL).
@@ -22,4 +22,4 @@ Setelah deploy selesai, tampilkan URL service lalu test endpoint /healthz dengan
 
 ✅ **Berhasil jika:** muncul URL `https://kuliner-agent-xxxxxxxx.us-central1.run.app` dan `/healthz` membalas `{"status":"ok"}`.
 
-🛟 **Kalau gagal:** keluar dari Gemini CLI (`/quit`) dan jalankan `./scripts/02_deploy.sh`.
+🛟 **Kalau gagal:** buka tab terminal baru, lalu jalankan `cd ~/devfest-prod-agents-workshop && ./scripts/02_deploy.sh`.

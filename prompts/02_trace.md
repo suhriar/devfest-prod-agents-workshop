@@ -2,7 +2,7 @@
 
 > Skill yang dipakai: `cloud-trace-querying`
 > Jalankan **setelah** `./scripts/03_generate_traffic.sh` dan tunggu ±1 menit.
-> Tempel setiap prompt di **Gemini CLI**, berurutan.
+> Tempel setiap prompt di **Antigravity CLI**, berurutan.
 
 Struktur span yang dibuat ADK (untuk referensi):
 

@@ -1,7 +1,7 @@
 # Production-Grade AI Agents: Automated Cloud Run Deployment & End-to-End Tracing with Google Agent Skills
 
 Workshop hands-on: membangun AI agent sederhana dengan **Google ADK**, men-deploy-nya ke
-**Cloud Run** secara otomatis menggunakan **Gemini CLI + [Google Agent Skills](https://github.com/google/skills)**,
+**Cloud Run** secara otomatis menggunakan **Antigravity CLI + [Google Agent Skills](https://github.com/google/skills)**,
 lalu menelusuri setiap langkah agent (panggilan LLM, panggilan tool) lewat **Cloud Trace**.
 
 Semua langkah dikerjakan di **Google Cloud Shell**, jadi setiap peserta punya lingkungan yang sama
@@ -34,7 +34,7 @@ Kita akan membuat **"Arek Kuliner"** 🍜, AI agent pemandu kuliner Surabaya den
 
 ```mermaid
 flowchart LR
-    Dev["👩‍💻 Kamu di Cloud Shell"] -->|prompt| CA["🤖 Gemini CLI"]
+    Dev["👩‍💻 Kamu di Cloud Shell"] -->|prompt| CA["🤖 Antigravity CLI (agy)"]
     SK["📚 Google Agent Skills<br/>cloud-run-basics<br/>cloud-trace-querying"] -.->|panduan| CA
     CA -->|gcloud run deploy| CR["☁️ Cloud Run<br/>kuliner-agent (ADK)"]
     User["🙋 User"] -->|HTTP| CR
@@ -45,14 +45,13 @@ flowchart LR
 
 **Apa itu Agent Skills?** Skill adalah folder berisi `SKILL.md`, dokumen referensi, dan script yang mengajari
 coding agent cara mengerjakan tugas tertentu sesuai best practice resmi Google. Kita tidak perlu
-hafal semua flag `gcloud`; cukup minta ke Gemini CLI, dan Gemini CLI mengikuti panduan dari skill.
+hafal semua flag `gcloud`; cukup minta ke Antigravity CLI, dan Antigravity CLI mengikuti panduan dari skill.
 
 Skill yang dipakai:
 
 | Skill | Dipakai untuk |
 |---|---|
 | [`cloud-run-basics`](https://github.com/google/skills/tree/main/skills/cloud/cloud-run-basics) | Deploy & konfigurasi Cloud Run |
-| [`gcloud`](https://github.com/google/skills/tree/main/skills/cloud/gcloud) | Menjalankan perintah gcloud dengan benar |
 | [`cloud-trace-querying`](https://github.com/google/skills/tree/main/skills/cloud/cloud-trace-querying) | Mencari & membedah trace, menemukan bottleneck latency |
 | [`cloud-run-alert-configuration`](https://github.com/google/skills/tree/main/skills/cloud/cloud-run-alert-configuration) | *(bonus)* Alert latency & error |
 | [`cloud-logging-query-generation`](https://github.com/google/skills/tree/main/skills/cloud/cloud-logging-query-generation) | *(bonus)* Query log |
@@ -77,7 +76,6 @@ Skill yang dipakai:
 | Tool | Dipakai untuk |
 |---|---|
 | `gcloud` (sudah login otomatis) | Deploy, IAM, API |
-| `gemini` (Gemini CLI) | Coding agent yang menjalankan skill |
 | Node.js + `npx` | Install Google Agent Skills |
 | Python 3 + `venv` | Menjalankan agent di Cloud Shell & script skill trace |
 | `git`, `curl` | Clone repo, test API |
@@ -88,6 +86,7 @@ Skill yang dipakai:
 |---|---|---|
 | Google ADK (`google-adk[gcp]`) | `pip install -r requirements.txt` | Langkah 4 (opsional, untuk uji coba di Cloud Shell) |
 | Google Agent Skills | `npx skills add google/skills ...` | Langkah 5 |
+| Antigravity CLI (`agy`), coding agent | `curl -fsSL https://antigravity.google/cli/install.sh \| bash` | Langkah 5 |
 
 ---
 
@@ -106,7 +105,7 @@ Skill yang dipakai:
 ├── scripts/
 │   ├── 00_init.sh             # Cek project & billing, buat .env
 │   ├── 01_setup_gcp.sh        # Enable API + service account + IAM
-│   ├── 02_deploy.sh           # Deploy manual (cadangan kalau Gemini CLI bermasalah)
+│   ├── 02_deploy.sh           # Deploy manual (cadangan kalau Antigravity CLI bermasalah)
 │   ├── 03_generate_traffic.sh # Kirim pertanyaan ke agent -> menghasilkan trace
 │   └── 99_cleanup.sh          # Hapus semua resource
 └── prompts/
@@ -136,7 +135,7 @@ invoke_workflow kuliner_agent
 ## 4. Langkah-langkah Workshop
 
 > 💡 **Konvensi:** blok kode yang diawali `$` dijalankan di **terminal Cloud Shell**.
-> Blok di dalam Gemini CLI ditandai **"di Gemini CLI"**.
+> Blok yang diketik di dalam Antigravity CLI ditandai **"di Antigravity CLI"**.
 
 ### Langkah 1 — Buka Cloud Shell & ambil kode (5 menit)
 
@@ -160,10 +159,11 @@ invoke_workflow kuliner_agent
    ```
 
 > 🔁 **Kalau Cloud Shell terputus** (idle terlalu lama, atau tab ditutup), file kamu tetap aman. Setelah reconnect,
-> jalankan lagi tiga perintah ini:
+> jalankan lagi perintah berikut:
 > ```bash
 > export GOOGLE_CLOUD_PROJECT=PROJECT_ID_KAMU
 > gcloud config set project $GOOGLE_CLOUD_PROJECT
+> export PATH="$HOME/.local/bin:$PATH"
 > cd ~/devfest-prod-agents-workshop
 > ```
 
@@ -191,7 +191,7 @@ Script ini mengecek project & billing, lalu membuat file `.env`. Output yang dih
 ```
 
 Yang dilakukan script:
-1. Mengaktifkan API: Compute, Cloud Run, Cloud Build, Artifact Registry, Vertex AI, Cloud Trace, Logging, Monitoring, dan Developer Knowledge (untuk MCP bawaan Gemini CLI di Cloud Shell).
+1. Mengaktifkan API: Compute, Cloud Run, Cloud Build, Artifact Registry, Vertex AI, Cloud Trace, Logging, dan Monitoring.
 2. Membuat service account `kuliner-agent-sa` dengan **hak akses minimum**: memanggil Gemini, mengirim trace, menulis log.
 3. Memberi Cloud Build role `roles/run.builder`, sesuai panduan skill `cloud-run-basics`.
 
@@ -219,65 +219,71 @@ adk web --host 0.0.0.0 --port 8080 --allow_origins "https://8080-$WEB_HOST"
 3. Klik tab **Trace** di Dev UI untuk melihat langkah-langkah agent. Ini versi lokal dari apa yang nanti kita lihat di Cloud Trace.
 4. Selesai? Tekan `Ctrl+C` lalu jalankan `deactivate`.
 
-### Langkah 5 — Install Google Agent Skills & buka Gemini CLI (5 menit)
+### Langkah 5 — Install Google Agent Skills & Antigravity CLI (5 menit)
 
-Pastikan kamu ada di folder `~/devfest-prod-agents-workshop`, lalu install skill yang dibutuhkan:
+**5a. Install skill** dari folder `~/devfest-prod-agents-workshop`:
 
 ```bash
+cd ~/devfest-prod-agents-workshop
 npx -y skills add google/skills \
   -s cloud-run-basics \
   -s cloud-trace-querying \
   -s cloud-run-alert-configuration \
   -s cloud-logging-query-generation \
-  -a gemini-cli -y
+  -a antigravity-cli -y
 ```
 
 Output yang diharapkan: 4 baris `✓ <nama-skill> (copied) → ./.agents/skills/<nama-skill>` diakhiri `Done!`.
 
-> 💡 Skill `gcloud` tidak perlu diinstall karena sudah tersedia bawaan di Cloud Shell
-> (plugin `google-cloud-developer`).
-
-Buka Gemini CLI **dari folder project**. Gemini CLI akan memakai **Vertex AI di project kamu sendiri**,
-sama seperti agent kita, jadi tidak perlu lisensi atau API key:
+**5b. Install Antigravity CLI (`agy`)**, coding agent dari Google:
 
 ```bash
-export GOOGLE_CLOUD_LOCATION=global
-gemini
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-- Kalau ditanya *trust folder*, pilih **Trust folder**.
-- Saat ditanya *How would you like to authenticate*, pilih **4. Vertex AI**.
-- Kalau muncul *Update successful! The new version will be used on your next run*, ketik `/quit`, lalu jalankan `gemini` lagi.
+> ⚠️ Jangan install lewat `apt`. Paket `antigravity` di `apt` adalah aplikasi desktop, bukan CLI.
 
-Verifikasi skill terbaca. Ketik **di Gemini CLI**:
+**5c. Buka Antigravity CLI dari folder project & login:**
+
+```bash
+cd ~/devfest-prod-agents-workshop
+agy
+```
+
+1. Saat muncul *Select login method*, pilih **1. Google OAuth**.
+2. `agy` menampilkan sebuah URL. Buka URL itu di tab browser baru, login dengan **akun Google yang sama** dengan Cloud Shell, lalu klik *Allow*.
+3. Kalau browser menampilkan kode, salin dan tempel ke terminal, lalu Enter. Lakukan dengan cepat, karena prompt bisa kedaluwarsa. Kalau kedaluwarsa, jalankan `agy` lagi.
+
+**5d. Verifikasi skill terbaca.** Ketik **di Antigravity CLI**:
 
 ```
-/skills list
+/skills
 ```
 
-Empat skill tadi (`cloud-run-basics`, `cloud-trace-querying`, `cloud-run-alert-configuration`,
-`cloud-logging-query-generation`) harus muncul, ditambah skill bawaan Cloud Shell seperti `gcloud`.
-Kalau perintah `/skills` tidak dikenali, tanyakan saja: *"skill apa saja yang tersedia?"*
+Di bagian **Workspace skills** harus muncul empat skill: `cloud-logging-query-generation`, `cloud-run-alert-configuration`,
+`cloud-run-basics`, dan `cloud-trace-querying`. Skill lain di bagian *Shared skills* adalah bawaan Cloud Shell. Biarkan saja.
 
 ### Langkah 6 — 🚀 Deploy otomatis ke Cloud Run dengan skill (10–15 menit)
 
 Buka [`prompts/01_deploy.md`](prompts/01_deploy.md) (bisa lewat **Open Editor** di Cloud Shell), salin prompt-nya,
-lalu tempel **di Gemini CLI**.
+lalu tempel **di Antigravity CLI**.
 
 Yang akan terjadi:
-1. Gemini CLI memuat skill `cloud-run-basics` dan menyusun rencana deploy.
-2. Setiap perintah `gcloud` akan **meminta persetujuanmu**. Baca dulu, lalu pilih *Allow once*.
+1. Antigravity CLI memuat skill `cloud-run-basics` dan menyusun rencana deploy.
+2. Sebelum menjalankan perintah, Antigravity CLI akan **meminta persetujuanmu**. Baca dulu perintahnya, baru setujui.
 3. Cloud Build membangun image dari `Dockerfile`, kemudian Cloud Run menjalankannya (±3–5 menit).
-4. Gemini CLI menampilkan URL service dan mengetes `/healthz`.
+4. Antigravity CLI menampilkan URL service dan mengetes `/healthz`.
 
 ✅ **Berhasil jika** muncul URL seperti `https://kuliner-agent-xxxxxxxx.us-central1.run.app` dan `/healthz` membalas `{"status":"ok"}`.
 
 <details>
-<summary>🛟 <b>Cara cadangan</b>: deploy tanpa Gemini CLI</summary>
+<summary>🛟 <b>Cara cadangan</b>: deploy tanpa Antigravity CLI</summary>
 
-Keluar dari Gemini CLI (`/quit`), lalu di terminal:
+Buka tab terminal baru di Cloud Shell (ikon **+**), lalu jalankan:
 
 ```bash
+cd ~/devfest-prod-agents-workshop
 ./scripts/02_deploy.sh
 ```
 
@@ -305,10 +311,10 @@ Script ini menjalankan perintah `gcloud run deploy` yang sama persis dengan konf
 3. Klik span `generate_content ...` dan lihat atribut `gen_ai.*`: model dan jumlah token input/output.
 4. Klik span `execute_tool cek_antrian` dan perhatikan durasinya 🐢.
 
-**8b. Lewat Gemini CLI + skill `cloud-trace-querying`:**
+**8b. Lewat Antigravity CLI + skill `cloud-trace-querying`:**
 
-Buka [`prompts/02_trace.md`](prompts/02_trace.md) dan jalankan prompt 2a → 2d secara berurutan **di Gemini CLI**.
-Gemini CLI akan menjalankan script dari skill (`search_traces`, `fetch_entire_trace`, `fetch_related_logs`,
+Buka [`prompts/02_trace.md`](prompts/02_trace.md) dan jalankan prompt 2a → 2d secara berurutan **di Antigravity CLI**.
+Antigravity CLI akan menjalankan script dari skill (`search_traces`, `fetch_entire_trace`, `fetch_related_logs`,
 `generate_links`) dan menyimpulkan bahwa **`cek_antrian` adalah bottleneck**.
 
 > 💡 Inti workshop: coding agent tidak hanya bisa men-deploy, tapi juga **mengobservasi** dan
@@ -344,9 +350,9 @@ Mau benar-benar bersih? Hapus seluruh project di
 | `PERMISSION_DENIED` saat setup/deploy | Pastikan akunmu **Owner** di project (otomatis kalau kamu yang membuat project). Tunggu 1–2 menit setelah setup, lalu ulangi. |
 | Deploy gagal di tahap build (`Build failed`) | Biasanya karena izin IAM belum aktif. Tunggu 1 menit, lalu jalankan ulang `./scripts/01_setup_gcp.sh` dan deploy lagi. |
 | Deploy gagal: `allow-unauthenticated ... organization policy` | Akunmu dibatasi kebijakan organisasi. Pakai Gmail pribadi dengan project baru. |
-| Gemini CLI: `You do not have a valid license of this product` | Kamu memilih *Use Cloud Shell user credentials* atau *Sign in with Google*. Ketik `/auth` di Gemini CLI, lalu pilih **Vertex AI**. |
-| Gemini CLI (Vertex AI) error project/location belum di-set | `/quit`, jalankan `export GOOGLE_CLOUD_PROJECT=PROJECT_ID_KAMU GOOGLE_CLOUD_LOCATION=global`, lalu `gemini` lagi. |
-| Gemini CLI tidak menemukan skill | Keluar (`/quit`), pastikan berada di `~/devfest-prod-agents-workshop` (ada folder `.agents/skills`), lalu jalankan lagi `gemini`. |
+| `agy: command not found` | Jalankan `export PATH="$HOME/.local/bin:$PATH"`. Tab terminal baru biasanya sudah otomatis. |
+| Login `agy` gagal / kode kedaluwarsa | Jalankan `agy` lagi dan ulangi login dengan cepat. Kalau Google OAuth tetap ditolak, pilih **2. Use a Google Cloud project** dan masukkan Project ID kamu. |
+| Antigravity CLI tidak menemukan skill workshop | Keluar, pastikan berada di `~/devfest-prod-agents-workshop` (ada folder `.agents/skills`), lalu jalankan `agy` lagi. |
 | Agent membalas error `404 ... model not found` | Ubah `MODEL` di `.env` (misal `gemini-2.5-flash`), lalu deploy ulang. |
 | Trace tidak muncul | Tunggu 1–2 menit dan refresh. Pastikan deploy memakai flag `--no-cpu-throttling` dan env `TRACE_TO_CLOUD=true`. |
 | Script skill trace: `Could not automatically determine credentials` | Jalankan `gcloud auth application-default login` di terminal Cloud Shell. |
@@ -387,6 +393,6 @@ Mau benar-benar bersih? Hapus seluruh project di
 - Google Agent Skills: https://github.com/google/skills
 - Agent Development Kit (ADK): https://google.github.io/adk-docs/
 - Cloud Shell: https://cloud.google.com/shell/docs
-- Gemini CLI: https://github.com/google-gemini/gemini-cli
+- Antigravity CLI: https://antigravity.google/docs/cli-overview
 - Cloud Run: https://cloud.google.com/run/docs
 - Cloud Trace: https://cloud.google.com/trace/docs

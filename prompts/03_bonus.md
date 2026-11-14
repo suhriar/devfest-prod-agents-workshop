@@ -1,6 +1,6 @@
 # Prompt 3 — Bonus: dari "jalan" ke "production-grade"
 
-Kalau masih ada waktu, coba prompt-prompt berikut di **Gemini CLI**.
+Kalau masih ada waktu, coba prompt-prompt berikut di **Antigravity CLI**.
 Skill `cloud-run-alert-configuration` dan `cloud-logging-query-generation` sudah terinstall di Langkah 5.
 
 ### 3a. Perbaiki bottleneck lalu redeploy (skill: `cloud-run-basics`, `cloud-trace-querying`)

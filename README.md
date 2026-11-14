@@ -203,8 +203,16 @@ Tunggu sampai muncul `✅ Setup GCP selesai`, lalu **tunggu ±1 menit** agar izi
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -q -r requirements.txt
-adk web --host 0.0.0.0 --port 8080
+adk telemetry disable
+echo "Alamat Web Preview: https://8080-$WEB_HOST"
+adk web --host 0.0.0.0 --port 8080 --allow_origins "https://8080-$WEB_HOST"
 ```
+
+> - `adk telemetry disable` mencegah munculnya pertanyaan *"Enable telemetry? [Y/n]"*.
+>   Kalau pertanyaan itu tetap muncul, ketik `n` lalu Enter. Hati-hati: Enter tanpa mengetik apa pun dianggap **Yes**.
+> - `--allow_origins` **wajib** di Cloud Shell. Tanpa flag ini, ADK menolak file JavaScript Dev UI
+>   dari alamat Web Preview (log menampilkan `403 Forbidden`, halaman kosong).
+>   `$WEB_HOST` sudah disediakan otomatis oleh Cloud Shell.
 
 1. Klik tombol **Web Preview** (ikon 👁️ / `<>` di toolbar Cloud Shell) → **Preview on port 8080**.
 2. Pilih `kuliner_agent` di kiri atas, lalu tanya: *"Rekomendasi kuliner di Surabaya timur dan cek antriannya"*.
@@ -335,6 +343,8 @@ Mau benar-benar bersih? Hapus seluruh project di
 | Trace tidak muncul | Tunggu 1–2 menit dan refresh. Pastikan deploy memakai flag `--no-cpu-throttling` dan env `TRACE_TO_CLOUD=true`. |
 | Script skill trace: `Could not automatically determine credentials` | Jalankan `gcloud auth application-default login` di terminal Cloud Shell. |
 | Cloud Shell terputus / file seperti hilang | Reconnect, lalu `cd ~/devfest-prod-agents-workshop`. Folder home tetap tersimpan. |
+| Langkah 4: Dev UI kosong, log `GET /dev-ui/*.js 403 Forbidden` | `adk web` dijalankan tanpa `--allow_origins`. Tekan `Ctrl+C`, lalu jalankan perintah `adk web ... --allow_origins "https://8080-$WEB_HOST"` dari Langkah 4. |
+| Langkah 4: `$WEB_HOST` kosong | Salin alamat dari address bar tab Web Preview, cukup bagian `https://8080-....cloudshell.dev` tanpa path, lalu pakai sebagai nilai `--allow_origins`. |
 | Lihat log error service | `gcloud run services logs read kuliner-agent --region us-central1 --limit 50` |
 
 ---

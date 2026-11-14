@@ -1,0 +1,2 @@
+# Extra [gcp] wajib: berisi exporter OpenTelemetry ke Cloud Trace.
+google-adk[gcp]==2.14.1

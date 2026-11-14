@@ -1,0 +1,16 @@
+# File yang TIDAK di-upload saat `gcloud run deploy --source .`
+.gcloudignore
+.git/
+.gitignore
+.venv/
+__pycache__/
+*.pyc
+.env
+.adk/
+.agents/
+.gemini/
+.claude/
+skills-lock.json
+prompts/
+scripts/
+README.md

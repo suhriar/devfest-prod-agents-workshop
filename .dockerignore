@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.agents/
+.claude/
+.gemini/
+prompts/
+scripts/
+README.md
+skills-lock.json
+.adk/

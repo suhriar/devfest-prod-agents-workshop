@@ -191,7 +191,7 @@ Script ini mengecek project & billing, lalu membuat file `.env`. Output yang dih
 ```
 
 Yang dilakukan script:
-1. Mengaktifkan API: Compute, Cloud Run, Cloud Build, Artifact Registry, Vertex AI, Cloud Trace, Logging, Monitoring, dan Gemini for Google Cloud (untuk Gemini CLI).
+1. Mengaktifkan API: Compute, Cloud Run, Cloud Build, Artifact Registry, Vertex AI, Cloud Trace, Logging, Monitoring, dan Developer Knowledge (untuk MCP bawaan Gemini CLI di Cloud Shell).
 2. Membuat service account `kuliner-agent-sa` dengan **hak akses minimum**: memanggil Gemini, mengirim trace, menulis log.
 3. Memberi Cloud Build role `roles/run.builder`, sesuai panduan skill `cloud-run-basics`.
 
@@ -226,23 +226,28 @@ Pastikan kamu ada di folder `~/devfest-prod-agents-workshop`, lalu install skill
 ```bash
 npx -y skills add google/skills \
   -s cloud-run-basics \
-  -s gcloud \
   -s cloud-trace-querying \
   -s cloud-run-alert-configuration \
   -s cloud-logging-query-generation \
   -a gemini-cli -y
 ```
 
-Output yang diharapkan: 5 baris `✓ <nama-skill> (copied) → ./.agents/skills/<nama-skill>` diakhiri `Done!`.
+Output yang diharapkan: 4 baris `✓ <nama-skill> (copied) → ./.agents/skills/<nama-skill>` diakhiri `Done!`.
 
-Buka Gemini CLI **dari folder project**:
+> 💡 Skill `gcloud` tidak perlu diinstall karena sudah tersedia bawaan di Cloud Shell
+> (plugin `google-cloud-developer`).
+
+Buka Gemini CLI **dari folder project**. Gemini CLI akan memakai **Vertex AI di project kamu sendiri**,
+sama seperti agent kita, jadi tidak perlu lisensi atau API key:
 
 ```bash
+export GOOGLE_CLOUD_LOCATION=global
 gemini
 ```
 
 - Kalau ditanya *trust folder*, pilih **Trust folder**.
-- Kalau ditanya metode login, pilih **Use Cloud Shell user credentials** (atau **Login with Google**).
+- Saat ditanya *How would you like to authenticate*, pilih **4. Vertex AI**.
+- Kalau muncul *Update successful! The new version will be used on your next run*, ketik `/quit`, lalu jalankan `gemini` lagi.
 
 Verifikasi skill terbaca. Ketik **di Gemini CLI**:
 
@@ -250,7 +255,9 @@ Verifikasi skill terbaca. Ketik **di Gemini CLI**:
 /skills list
 ```
 
-Lima skill tadi harus muncul. Kalau perintah `/skills` tidak dikenali, tanyakan saja: *"skill apa saja yang tersedia?"*
+Empat skill tadi (`cloud-run-basics`, `cloud-trace-querying`, `cloud-run-alert-configuration`,
+`cloud-logging-query-generation`) harus muncul, ditambah skill bawaan Cloud Shell seperti `gcloud`.
+Kalau perintah `/skills` tidak dikenali, tanyakan saja: *"skill apa saja yang tersedia?"*
 
 ### Langkah 6 — 🚀 Deploy otomatis ke Cloud Run dengan skill (10–15 menit)
 
@@ -337,7 +344,8 @@ Mau benar-benar bersih? Hapus seluruh project di
 | `PERMISSION_DENIED` saat setup/deploy | Pastikan akunmu **Owner** di project (otomatis kalau kamu yang membuat project). Tunggu 1–2 menit setelah setup, lalu ulangi. |
 | Deploy gagal di tahap build (`Build failed`) | Biasanya karena izin IAM belum aktif. Tunggu 1 menit, lalu jalankan ulang `./scripts/01_setup_gcp.sh` dan deploy lagi. |
 | Deploy gagal: `allow-unauthenticated ... organization policy` | Akunmu dibatasi kebijakan organisasi. Pakai Gmail pribadi dengan project baru. |
-| Gemini CLI error `Gemini for Google Cloud API has not been used` | Jalankan `gcloud services enable cloudaicompanion.googleapis.com`, tunggu 1 menit, buka lagi `gemini`. |
+| Gemini CLI: `You do not have a valid license of this product` | Kamu memilih *Use Cloud Shell user credentials* atau *Sign in with Google*. Ketik `/auth` di Gemini CLI, lalu pilih **Vertex AI**. |
+| Gemini CLI (Vertex AI) error project/location belum di-set | `/quit`, jalankan `export GOOGLE_CLOUD_PROJECT=PROJECT_ID_KAMU GOOGLE_CLOUD_LOCATION=global`, lalu `gemini` lagi. |
 | Gemini CLI tidak menemukan skill | Keluar (`/quit`), pastikan berada di `~/devfest-prod-agents-workshop` (ada folder `.agents/skills`), lalu jalankan lagi `gemini`. |
 | Agent membalas error `404 ... model not found` | Ubah `MODEL` di `.env` (misal `gemini-2.5-flash`), lalu deploy ulang. |
 | Trace tidak muncul | Tunggu 1–2 menit dan refresh. Pastikan deploy memakai flag `--no-cpu-throttling` dan env `TRACE_TO_CLOUD=true`. |

@@ -12,8 +12,11 @@ gcloud services enable \
   cloudtrace.googleapis.com \
   logging.googleapis.com \
   monitoring.googleapis.com \
-  cloudaicompanion.googleapis.com \
   --project "$GOOGLE_CLOUD_PROJECT" --quiet
+
+# Opsional: dipakai MCP server "developer-knowledge" bawaan Gemini CLI di Cloud Shell.
+gcloud services enable developerknowledge.googleapis.com --project "$GOOGLE_CLOUD_PROJECT" --quiet >/dev/null 2>&1 || \
+  echo "  (lewati: Developer Knowledge API tidak bisa diaktifkan, tidak wajib)"
 
 echo "▶ Buat service account khusus agent: $SA_EMAIL"
 if ! gcloud iam service-accounts describe "$SA_EMAIL" --project "$GOOGLE_CLOUD_PROJECT" >/dev/null 2>&1; then
